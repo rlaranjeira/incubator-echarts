@@ -298,7 +298,7 @@ AxisProxy.prototype = {
         // `calculateDataWindow` uses min/maxSpan.
         setMinMaxSpan(this);
 
-        var dataWindow = this.calculateDataWindow(dataZoomModel.option);
+        var dataWindow = this.calculateDataWindow(dataZoomModel.settledOption);
 
         this._valueWindow = dataWindow.valueWindow;
         this._percentWindow = dataWindow.percentWindow;
@@ -390,7 +390,7 @@ AxisProxy.prototype = {
                 each(dataDims, function (dim) {
                     if (filterMode === 'empty') {
                         seriesModel.setData(
-                            seriesData.map(dim, function (value) {
+                            seriesData = seriesData.map(dim, function (value) {
                                 return !isInWindow(value) ? NaN : value;
                             })
                         );
