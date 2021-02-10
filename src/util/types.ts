@@ -34,7 +34,7 @@ import SeriesModel from '../model/Series';
 import { createHashMap, HashMap } from 'zrender/src/core/util';
 import { TaskPlanCallbackReturn, TaskProgressParams } from '../core/task';
 import List, {ListDimensionType} from '../data/List';
-import { Dictionary, ImageLike, TextAlign, TextVerticalAlign } from 'zrender/src/core/types';
+import { Dictionary, ElementEventName, ImageLike, TextAlign, TextVerticalAlign } from 'zrender/src/core/types';
 import { PatternObject } from 'zrender/src/graphic/Pattern';
 import { TooltipMarker } from './format';
 import { AnimationEasing } from 'zrender/src/animation/easing';
@@ -79,6 +79,8 @@ export type ZRElementEvent = ElementEvent;
 export type ZRRectLike = RectLike;
 
 export type ZRStyleProps = PathStyleProps | ImageStyleProps | TSpanStyleProps | TextStyleProps;
+
+export type ZRElementEventName = ElementEventName | 'globalout';
 
 // ComponentFullType can be:
 //     'xxx.yyy': means ComponentMainType.ComponentSubType.
@@ -135,6 +137,7 @@ export interface DataModel extends DataHost, DataFormatMixin {}
 interface PayloadItem {
     excludeSeriesId?: OptionId | OptionId[];
     animation?: PayloadAnimationPart
+    // TODO use unknown
     [other: string]: any;
 }
 
@@ -181,25 +184,34 @@ export interface ViewRootGroup extends Group {
     };
 }
 
+export interface ECElementEvent extends
+    ECEventData,
+    CallbackDataParams {
+
+    type: ZRElementEventName;
+    event?: ElementEvent;
+
+}
 /**
  * The echarts event type to user.
  * Also known as packedEvent.
  */
-export interface ECEvent extends ECEventData{
+export interface ECActionEvent extends ECEventData {
     // event type
     type: string;
     componentType?: string;
     componentIndex?: number;
     seriesIndex?: number;
     escapeConnect?: boolean;
-    event?: ElementEvent;
     batch?: ECEventData;
 }
 export interface ECEventData {
+    // TODO use unknown
     [key: string]: any;
 }
 
-export interface EventQueryItem{
+export interface EventQueryItem {
+    // TODO use unknown
     [key: string]: any;
 }
 export interface NormalizedEventQuery {
@@ -326,9 +338,17 @@ export type TooltipOrderMode = 'valueAsc' | 'valueDesc' | 'seriesAsc' | 'seriesD
 // Check `convertValue` for more details.
 export type OrdinalRawValue = string | number;
 export type OrdinalNumber = number; // The number mapped from each OrdinalRawValue.
+
+/**
+ * @usage For example,
+ * ```js
+ * { ordinalNumbers: [2, 5, 3, 4] }
+ * ```
+ * means that ordinal 2 should be diplayed on tick 0,
+ * ordinal 5 should be displayed on tick 1, ...
+ */
 export type OrdinalSortInfo = {
-    ordinalNumber: OrdinalNumber,
-    beforeSortIndex: number
+    ordinalNumbers: OrdinalNumber[];
 };
 
 /**
@@ -342,6 +362,7 @@ export type OrdinalSortInfo = {
  */
 export type ParsedValue = ParsedValueNumeric | OrdinalRawValue;
 export type ParsedValueNumeric = number | OrdinalNumber;
+
 /**
  * `ScaleDataValue` means that the user input primitive value to `src/scale/Scale`.
  * (For example, used in `axis.min`, `axis.max`, `convertToPixel`).
@@ -366,7 +387,22 @@ export interface TimeScaleTick extends ScaleTick {
     level?: number
 };
 export interface OrdinalScaleTick extends ScaleTick {
-    value: OrdinalNumber
+    /**
+     * Represents where the tick will be placed visually.
+     * Notice:
+     * The value is not the raw ordinal value. And do not changed
+     * after ordinal scale sorted.
+     * We need to:
+     * ```js
+     * const coord = dataToCoord(ordinalScale.getRawOrdinalNumber(tick.value)).
+     * ```
+     * Why place the tick value here rather than the raw ordinal value (like LogScale did)?
+     * Becuase ordinal scale sort is the different case from LogScale, where
+     * axis tick, splitArea should better not to be sorted, especially in
+     * anid(animation id) when `boundaryGap: true`.
+     * Only axis label are sorted.
+     */
+    value: number
 };
 
 // Can only be string or index, because it is used in object key in some code.
@@ -645,6 +681,7 @@ export interface CallbackDataParams {
     // Param name list for mapping `a`, `b`, `c`, `d`, `e`
     $vars: string[];
 }
+export type InterpolatableValue = ParsedValue | ParsedValue[];
 export type DimensionUserOuputEncode = {
     [coordOrVisualDimName: string]:
         // index: coordDimIndex, value: dataDimIndex
